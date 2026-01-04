@@ -21,7 +21,7 @@ An interactive web application that generates AI-powered children's stories with
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/StoryBot.git
+   git clone https://github.com/thebingx/StoryBot.git
    cd StoryBot
    ```
 
@@ -59,7 +59,8 @@ VOLC_API_KEY=your_volc_api_key_here
 Start the server with internet access for full functionality:
 
 ```bash
-python server/main.py
+cd server
+python main.py
 ```
 
 The app will be available at `http://localhost:8000`
