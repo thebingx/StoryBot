@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-title" content="Story Kingdom">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>AI Story Kingdom</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Fredoka+One&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <style>
+        :root {
+            --mario-red: #e52521;
+            --mario-blue: #049cd8;
+            --mario-yellow: #fbd000;
+            --grass-green: #43ad11;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Press Start 2P', cursive;
+            background-color: var(--mario-blue);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        #bg-elements-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .bg-element {
+            position: absolute;
+            font-size: 2.5rem;
+            will-change: transform;
+            filter: drop-shadow(3px 3px 0px rgba(0,0,0,0.2));
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 700px;
+            background: white;
+            border: 6px solid #000;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 10px 10px 0px rgba(0,0,0,0.2);
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        h1 { font-family: 'Press Start 2P', cursive; font-size: 1.2rem; color: var(--mario-red); margin-bottom: 30px; }
+
+        input {
+            width: 80%;
+            padding: 15px;
+            font-size: 18px;
+            border: 4px solid var(--mario-yellow);
+            border-radius: 10px;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .mario-btn {
+            background: var(--grass-green);
+            color: white;
+            padding: 15px 30px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.8rem;
+            border: 4px solid #2d7a0b;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #2d7a0b;
+            margin: 10px;
+            transition: all 0.1s;
+        }
+
+        .mario-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #2d7a0b; }
+
+        #loading-screen { 
+            display: none; /* FIX 1: Hidden by default */
+            font-family: 'Press Start 2P', cursive;
+            margin: 20px;
+            color: var(--mario-red);
+        }
+
+        #story-display { display: none; text-align: left; }
+        
+        #story-title { 
+            color: var(--mario-blue); 
+            position: relative;
+            padding-bottom: 25px;
+            margin-bottom: 20px;
+            border: none;
+            text-align: center;
+        }
+
+        #story-title::after {
+            content: '🏰 ☁️ 🏰 ☁️ 🏰';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.2rem;
+            letter-spacing: 10px;
+        }
+        
+        #story-text { 
+            line-height: 1.6; 
+            font-size: 0.9rem; 
+            font-family: Arial, sans-serif;
+            margin: 20px 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            display: block;
+        }
+
+        .difficulty-btn {
+            background: var(--grass-green);
+            color: white;
+            padding: 15px 20px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 0.6rem;
+            border: 3px solid #2d7a0b;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            transition: all 0.1s;
+            box-shadow: 0 3px 0 #2d7a0b;
+        }
+
+        .difficulty-btn.selected {
+            background: var(--mario-blue);
+            border-color: #0378a5;
+            box-shadow: 0 1px 0 #0378a5;
+            transform: translateY(2px);
+        }
+
+        .difficulty-btn:hover {
+            background: #43ad11;
+        }
+
+        .difficulty-btn.selected:hover {
+            background: var(--mario-blue);
+        }
+
+        #optional-inputs {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid var(--mario-yellow);
+            border-radius: 10px;
+            background: #FFFACD;
+        }
+
+        #optional-inputs input {
+            width: 95%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 2px solid var(--mario-yellow);
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .image-wrapper {
+            position: relative;
+            margin: 40px auto;
+            max-width: 500px;
+            opacity: 0;
+            transform: scale(0.8) rotate(-2deg);
+            transition: all 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .image-wrapper.reveal {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+
+        #story-image {
+            width: 100%;
+            display: block;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .small-text {
+            font-family: 'Fredoka One', cursive;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+
+<div id="bg-elements-container"></div>
+
+<div id="game-container">
+    <div id="input-screen">
+        <h1>STORY KINGDOM</h1>
+        <p class="small-text">What should the story be about?</p>
+        <input type="text" id="topicInput" placeholder="e.g. A flying dinosaur">
+        <div id="difficulty-buttons" style="display: flex; justify-content: center; flex-wrap: wrap;">
+            <button class="difficulty-btn" data-level="easy">EASY<br>(Kindergarten)</button>
+            <button class="difficulty-btn selected" data-level="normal">NORMAL<br>(Elementary)</button>
+            <button class="difficulty-btn" data-level="hard">HARD<br>(High School)</button>
+        </div>
+        <div style="text-align: center; font-size: 24px; margin: 20px 0; color: var(--mario-red);">
+            🏰 🌟 🏰 🌟 🏰 🌟 🏰 🌟 🏰 🌟 🏰 🌟 🏰
+        </div>
+        <button class="mario-btn" id="toggle-options" onclick="toggleOptions()" style="padding: 5px 10px; font-size: 0.5rem; background: grey; border-color: #555; box-shadow: 0 2px 0 #555;">ADVANCED OPTIONS ▼</button>
+        <div id="optional-inputs">
+            <p class="small-text">Name of the character (leave as 'random' for random):</p>
+            <input type="text" id="characterName" placeholder="random" value="random">
+            <p class="small-text">Specific words to include in the story (optional):</p>
+            <input type="text" id="specificWords" placeholder="e.g. magic, adventure, friendship">
+        </div>
+        <br>
+        <button class="mario-btn" onclick="generateStory()" style="background: var(--mario-red); border-color: #b11a17; box-shadow: 0 5px 0 #b11a17;">START ADVENTURE</button>
+        <button class="mario-btn" style="background:var(--mario-yellow); border-color:#c8a600; color:black;" onclick="window.location.href='/storybook'">STORY BOOK</button>
+    </div>
+
+    <div id="loading-screen">GENERATING...</div>
+
+    <div id="story-display">
+        <h2 id="story-title"></h2>
+        
+        <div id="story-text"></div>
+
+        <div class="image-wrapper" id="image-wrapper">
+            <img id="story-image" src="" alt="Story illustration">
+        </div>
+
+        <div id="controls" style="margin-top:20px; display:none; text-align: center;">
+            <button id="play-btn" class="mario-btn" style="background:var(--mario-blue); border-color:#0378a5;" onclick="handlePlayClick()">▶ PLAY</button>
+            <button class="mario-btn" style="background:var(--mario-red); border-color:#b11a17;" onclick="resetApp()">NEW STORY</button>
+            <button class="mario-btn" style="background:var(--mario-yellow); border-color:#c8a600; color:black;" onclick="window.location.href='/storybook'">STORY BOOK</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const bgs = ['bg-desert', 'bg-forest', 'bg-castle'];
+    const emojis = ['🍄', '🪙', '⭐', '☁️', '🧱', '🐢', '🦖', '🔥', '🌻'];
+    let elements = [];
+    let currentAudio = null; // Track global audio object
+    
+    // Check if we arrived here from the Story Book "Replay" button
+    window.onload = function() {
+        const replayData = sessionStorage.getItem('replay_story');
+        if (replayData) {
+            const story = JSON.parse(replayData);
+            sessionStorage.removeItem('replay_story'); // Clear it so it doesn't loop
+            showSavedStory(story);
+        }
+
+        // Initialize difficulty buttons
+        const buttons = document.querySelectorAll('.difficulty-btn');
+        buttons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                buttons.forEach(b => b.classList.remove('selected'));
+                this.classList.add('selected');
+            });
+        });
+    };
+
+    function toggleOptions() {
+        const options = document.getElementById('optional-inputs');
+        const toggleBtn = document.getElementById('toggle-options');
+        if (options.style.display === 'none' || options.style.display === '') {
+            options.style.display = 'block';
+            toggleBtn.innerHTML = 'ADVANCED OPTIONS ▲';
+        } else {
+            options.style.display = 'none';
+            toggleBtn.innerHTML = 'ADVANCED OPTIONS ▼';
+        }
+    }
+
+    function showSavedStory(story) {
+        // 1. UI Switch
+        document.getElementById('input-screen').style.display = 'none';
+        document.getElementById('story-display').style.display = 'block';
+        document.getElementById('controls').style.display = 'block';
+
+        // 2. Parse Title and Body
+        const lines = story.text.split('\n');
+        const title = lines[0].replace("TITLE:", "").trim();
+        const body = lines.slice(1).join('\n');
+
+        // 3. Populate Content
+        document.getElementById('story-title').innerText = title;
+        document.getElementById('story-text').innerHTML = formatMarioText(body);
+        
+        // 4. Handle Image (Use local path if it exists, otherwise URL)
+        const img = document.getElementById('story-image');
+        const wrapper = document.getElementById('image-wrapper');
+        img.src = story.local_image_path ? '/' + story.local_image_path : story.image_url;
+        img.onload = () => { wrapper.classList.add('reveal'); };
+        
+        // 5. Change Background
+        document.body.className = bgs[Math.floor(Math.random() * bgs.length)];
+    }
+
+
+
+
+    function createWorld() {
+        const container = document.getElementById('bg-elements-container');
+        container.innerHTML = '';
+        elements = [];
+        for (let i = 0; i < 12; i++) {
+            const el = document.createElement('div');
+            el.className = 'bg-element';
+            el.innerText = emojis[Math.floor(Math.random() * emojis.length)];
+            let x = Math.random() * window.innerWidth;
+            let y = Math.random() * window.innerHeight;
+            let dx = (Math.random() - 0.5) * 4;
+            let dy = (Math.random() - 0.5) * 4;
+            container.appendChild(el);
+            elements.push({ el, x, y, dx, dy });
+        }
+    }
+
+    function updatePhysics() {
+        elements.forEach(obj => {
+            obj.x += obj.dx;
+            obj.y += obj.dy;
+            if (obj.x <= 0 || obj.x >= window.innerWidth - 50) obj.dx *= -1;
+            if (obj.y <= 0 || obj.y >= window.innerHeight - 50) obj.dy *= -1;
+            obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`;
+        });
+        requestAnimationFrame(updatePhysics);
+    }
+
+    createWorld();
+    updatePhysics();
+
+    function formatMarioText(rawText) {
+        let safe = rawText.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        return safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    }
+
+    async function generateStory() {
+        const topic = document.getElementById('topicInput').value;
+        const selectedBtn = document.querySelector('.difficulty-btn.selected');
+        const level = selectedBtn ? selectedBtn.getAttribute('data-level') : 'normal';
+        const characterName = document.getElementById('characterName').value || 'Random';
+        const specificWords = document.getElementById('specificWords').value || '';
+        if (!topic) return alert("Tell me a topic!");
+
+        document.getElementById('input-screen').style.display = 'none';
+        document.getElementById('loading-screen').style.display = 'block';
+        document.body.className = bgs[Math.floor(Math.random() * bgs.length)];
+
+        try {
+            const response = await fetch('/generate-story', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ topic, level, character_name: characterName, specific_words: specificWords })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('story-display').style.display = 'block';
+            
+            let fullText = "";
+            let titleFound = false;
+            let buffer = "";
+            let textComplete = false;
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                let chunk = decoder.decode(value);
+                let processAsText = true;
+
+                // --- 1. HANDLE IMAGE URL ---
+                if (chunk.includes("||IMAGE_URL||")) {
+                    const parts = chunk.split("||IMAGE_URL||");
+                    // If there was text before the marker, add it
+                    if (parts[0] && !textComplete) {
+                        fullText += parts[0];
+                        document.getElementById('story-text').innerHTML = formatMarioText(fullText);
+                    }
+                    
+                    const imageUrl = parts[1].trim();
+                    if (imageUrl) {
+                        const img = document.getElementById('story-image');
+                        const wrapper = document.getElementById('image-wrapper');
+                        img.src = imageUrl;
+                        img.onload = () => { wrapper.classList.add('reveal'); };
+                    }
+                    processAsText = false; // Marker handled, don't treat as story text
+                }
+
+                // --- 2. HANDLE TEXT COMPLETION ---
+                if (chunk.includes("||TEXT_COMPLETE||")) {
+                    const parts = chunk.split("||TEXT_COMPLETE||");
+                    if (parts[0] && !textComplete) {
+                        fullText += parts[0];
+                        document.getElementById('story-text').innerHTML = formatMarioText(fullText);
+                    }
+                    
+                    // REVEAL PLAY BUTTON IMMEDIATELY
+                    document.getElementById('controls').style.display = 'block';
+                    textComplete = true; 
+                    processAsText = false; // Marker handled
+                }
+
+                // --- 3. EXISTING FEATURES (Title & Body) ---
+                // Only run if this chunk wasn't a marker and text isn't "complete"
+                if (processAsText && !textComplete) {
+                    if (!titleFound) {
+                        buffer += chunk;
+                        if (buffer.includes('\n')) {
+                            const parts = buffer.split('\n');
+                            const titleLine = parts[0].replace("TITLE:", "").trim();
+                            document.getElementById('story-title').innerText = titleLine;
+                            
+                            const remaining = parts.slice(1).join('\n');
+                            fullText += remaining;
+                            titleFound = true;
+                            document.getElementById('story-text').innerHTML = formatMarioText(fullText);
+                        }
+                    } else {
+                        fullText += chunk;
+                        document.getElementById('story-text').innerHTML = formatMarioText(fullText);
+                    }
+                }
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert("Bowser intercepted the message!");
+            resetApp();
+        }
+    }
+
+    // FIX 2: Added logic to handle Play/Stop toggle
+    function handlePlayClick() {
+        const btn = document.getElementById('play-btn');
+        
+        if (currentAudio && !currentAudio.paused) {
+            currentAudio.pause();
+            currentAudio.currentTime = 0;
+            btn.innerHTML = "▶ PLAY";
+        } else {
+            readAloud();
+        }
+    }
+
+    async function readAloud() {
+        const btn = document.getElementById('play-btn');
+        const textElement = document.getElementById('story-text');
+        const text = textElement.innerText || textElement.textContent;
+        
+        btn.innerHTML = "⌛ LOADING...";
+        btn.disabled = true;
+
+        try {
+            const serverIP = window.location.hostname;
+            const response = await fetch(`/tts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: text })
+            });
+
+            if (!response.ok) throw new Error('Server returned error');
+
+            const audioBlob = await response.blob();
+            const audioUrl = URL.createObjectURL(audioBlob);
+            
+            currentAudio = new Audio(audioUrl);
+            
+            // UI state for playing
+            currentAudio.onplay = () => {
+                btn.innerHTML = "⏹ STOP";
+                btn.disabled = false;
+            };
+
+            // UI state for finished
+            currentAudio.onended = () => {
+                btn.innerHTML = "▶ PLAY";
+                currentAudio = null;
+            };
+
+            currentAudio.play();
+        } catch (error) {
+            console.error('TTS Error:', error);
+            btn.innerHTML = "▶ PLAY";
+            btn.disabled = false;
+        }
+    }
+
+    function resetApp() {
+        // 1. Stop and cleanup audio
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.src = "";
+            currentAudio = null;
+        }
+
+        // 2. Clear Story Content (The "Ghost" Data)
+        document.getElementById('story-title').innerText = "";
+        document.getElementById('story-text').innerHTML = "";
+        
+        // 3. Reset Image
+        const img = document.getElementById('story-image');
+        img.src = ""; // Remove the old image URL
+        document.getElementById('image-wrapper').classList.remove('reveal');
+
+        // 4. Reset UI Visibility
+        document.getElementById('story-display').style.display = 'none';
+        document.getElementById('controls').style.display = 'none';
+        document.getElementById('input-screen').style.display = 'block';
+        
+        // 5. Reset Play Button UI
+        const playBtn = document.getElementById('play-btn');
+        playBtn.innerHTML = "▶ PLAY";
+        playBtn.disabled = false;
+
+        // 6. Reset Background
+        document.body.className = '';
+    }
+</script>
+</body>
+</html>
